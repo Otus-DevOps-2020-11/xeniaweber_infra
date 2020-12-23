@@ -1,6 +1,6 @@
 name: actions
 # Controls when the action will run. Triggers the workflow on pull requests
-# events but only for the main, homework/* branches
+# Events but only for the main, homework/* branches
 on:
   push:
     branches:
