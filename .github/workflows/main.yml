@@ -96,7 +96,7 @@ jobs:
       - name: Set error
         if: failure()
         run: |
-          echo "statusMessage=$(echo "$message%0AGitInfo")">>$GITHUB_ENV
+          echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
        # Set specific Status Message if job is successfull
       - name: Set success message
         if: ${{ success() && github.event_name == 'push' }}
@@ -111,7 +111,7 @@ jobs:
       - name: Set success status
         if: success()
         run: |
-              echo "statusMessage=$(echo "$message%0AGitInfo")">>$GITHUB_ENV
+              echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
       # Send Message to Telegram Chat
       - name: Send to Telegram
         if: always()
