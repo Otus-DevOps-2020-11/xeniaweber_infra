@@ -1,0 +1,122 @@
+name: actions
+# Controls when the action will run. Triggers the workflow on pull requests
+# Events but only for the main, homework/* branches
+on:
+  push:
+    branches:
+      - main
+      - homework/*
+  pull_request:
+    types: [assigned, unassigned, labeled, unlabeled, opened, reopened, edited, closed, ready_for_review, locked, unlocked, review_request, review_request_removed]
+    branches:
+      - main
+      - homework/*
+jobs:
+  build:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-20.04
+    steps:
+    # Checks-out the repository under $GITHUB_WORKSPACE, so the job can access it. It needs sudo
+      - uses: actions/checkout@v2
+    # Logout sudo. Next steps will be done as user named actions
+      - name: logout
+        run: |
+          exit
+    # Set environments for all job's steps
+      - name: Set Env
+        run: |
+            echo "statusSymbol=$(echo -ne '\xF0\x9F\x86\x98' | iconv -f utf-8)">>$GITHUB_ENV
+            echo "message=$(echo "Unknown Error. Job is failed")">>$GITHUB_ENV
+            echo "GIT_COMMIT_SHORT=$(git rev-parse --short=7 ${{ github.sha }})">>$GITHUB_ENV
+            echo "GIT_ACTOR_EMAIL=$(git --no-pager show -s --format='%ae')">>$GITHUB_ENV
+            echo "GIT_ACTOR_NAME=$(git --no-pager show -s --format='%an')">>$GITHUB_ENV
+            echo "GIT_COMMIT_MESSAGE=$(git log -1 --pretty=%s | cat)">>$GITHUB_ENV
+            echo "GIT_COMMIT_REPO=${{ github.repository }}">>$GITHUB_ENV
+            echo "GIT_COMMIT_BRANCH=$(git branch --show-current)">>$GITHUB_ENV
+      # Set git infortmation
+      - name: Set GitInfo
+        run: |
+           echo "GitInfo=$(echo "<code>Repository:</code> $GIT_COMMIT_REPO%0A<code>Compare Branch:</code> ${{ github.head_ref }}%0A<code>Base Branch:</code> ${{ github.base_ref }}%0A<code>Commit:</code> <b>$GIT_COMMIT_SHORT</b>%0A<code>Actor:</code> $GIT_ACTOR_NAME%0A<code>Message:</code> $GIT_COMMIT_MESSAGE")">>$GITHUB_ENV
+      # Pull Request actions
+      - name: Pull Request opened
+        if: ${{ github.event.action == 'opened' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request is opened")">>$GITHUB_ENV
+      - name: Pull Request reopened
+        if: ${{ github.event.action == 'reopened' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request is reopened")">>$GITHUB_ENV
+      - name: Pull Request assigned
+        if: ${{ github.event.action == 'assigned' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Some user was assigned to this Pull Request")">>$GITHUB_ENV
+      - name: Pull Request unassigned
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unassigned' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Some user was unassigned from this Pull Request")">>$GITHUB_ENV
+      - name: Pull Request labeled
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'labeled' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> A label was applied to this Pull Request")">>$GITHUB_ENV
+      - name: Pull Request unlabeled
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unlabeled' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> A label was removed to this Pull Request")">>$GITHUB_ENV
+      - name: Pull Request edited
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request was edited")">>$GITHUB_ENV
+      - name: Pull Request closed
+        if: ${{ github.event.action == 'closed' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request was closed")">>$GITHUB_ENV
+      - name: Pull Request is ready for review
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'ready_for_review' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request was taken out from draft mode")">>$GITHUB_ENV
+      - name: Pull Request locked
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'locked' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request was locked")">>$GITHUB_ENV
+      - name: Pull Request unlocked
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unlocked' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request was unlocked")">>$GITHUB_ENV
+      - name: Pull Request review request
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'review_requested' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Request a user for review")">>$GITHUB_ENV
+      - name: Pull Request rm review request
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'review_request_removed' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Remove request from user for review")">>$GITHUB_ENV
+      # Set specific Status Message if job is failed
+      - name: Set error
+        if: failure()
+        run: |
+          echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
+       # Set specific Status Message if job is successfull
+      - name: Set success message
+        if: ${{ success() && github.event_name == 'push' }}
+        run: |
+              echo "message=$(echo "<code>Details:</code> Something is successfully pushed to repository")">>$GITHUB_ENV
+      # Set specific Status Symbol
+      - name: Set success symbol
+        if: success()
+        run: |
+              echo "statusSymbol=$(echo -ne '\xE2\x9C\x85' | iconv -f utf-8)">>$GITHUB_ENV
+      # Set Message for Telegram
+      - name: Set success status
+        if: success()
+        run: |
+              echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
+      # Send Message to Telegram Chat
+      - name: Send to Telegram
+        if: always()
+        env:
+          TG_TOKEN: 1412871621:AAGzW6sTAQUgGU6HAsDDZ8eX082KSO3qQXE
+          TG_ID: -1001265046931
+        run: |
+              curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" -d chat_id=$TG_ID -d parse_mode="HTML" -d text="<code>Status:</code>$statusSymbol%0A$statusMessage"
