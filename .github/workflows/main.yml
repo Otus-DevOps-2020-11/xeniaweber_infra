@@ -7,10 +7,12 @@ on:
       - main
       - homework/*
   pull_request:
-    types: [assigned, unassigned, labeled, unlabeled, opened, reopened, edited, closed, ready_for_review, locked, unlocked, review_request, review_request_removed]
+    types: [assigned, unassigned, labeled, unlabeled, opened, reopened, edited, closed, ready_for_review, locked, unlocked, review_requested, review_request_removed]
     branches:
       - main
       - homework/*
+  pull_request_review:
+  pull_request_review_comment:
 jobs:
   build:
     defaults:
@@ -24,6 +26,10 @@ jobs:
       - name: logout
         run: |
           exit
+    # Payload
+      - name: Show Payload
+        if: success()
+        run: cat ${{ github.event_path }}
     # Set environments for all job's steps
       - name: Set Env
         run: |
@@ -35,10 +41,24 @@ jobs:
             echo "GIT_COMMIT_MESSAGE=$(git log -1 --pretty=%s | cat)">>$GITHUB_ENV
             echo "GIT_COMMIT_REPO=${{ github.repository }}">>$GITHUB_ENV
             echo "GIT_COMMIT_BRANCH=$(git branch --show-current)">>$GITHUB_ENV
-      # Set git infortmation
+            echo "label_name=${{ github.event.label.name }}">>$GITHUB_ENV
+            echo "label_description=${{ github.event.label.description }}">>$GITHUB_ENV
+            echo "assignee_login=${{ github.event.assignee.login }}">>$GITHUB_ENV
+            echo "assignee_type=${{ github.event.assignee.type }}">>$GITHUB_ENV
+            echo "reviewer_login=${{ github.event.requested_reviewer.login }}">>$GITHUB_ENV
+            echo "comment=${{ github.body }}">>$GITHUB_ENV
+            echo "title=${{ github.title }}">>$GITHUB_ENV
+      # Set information about github event
       - name: Set GitInfo
+        if: ${{ github.event_name == 'push' }}
         run: |
-           echo "GitInfo=$(echo "<code>Repository:</code> $GIT_COMMIT_REPO%0A<code>Compare Branch:</code> ${{ github.head_ref }}%0A<code>Base Branch:</code> ${{ github.base_ref }}%0A<code>Commit:</code> <b>$GIT_COMMIT_SHORT</b>%0A<code>Actor:</code> $GIT_ACTOR_NAME%0A<code>Message:</code> $GIT_COMMIT_MESSAGE")">>$GITHUB_ENV
+           echo "GitInfo=$(echo "<code>Repository:</code> $GIT_COMMIT_REPO%0A<code>Branch:</code> $GIT_COMMIT_BRANCH%0A<code>Commit:</code> <b>$GIT_COMMIT_SHORT</b>%0A<code>Actor:</code> $GIT_ACTOR_NAME%0A<code>Message:</code> $GIT_COMMIT_MESSAGE")">>$GITHUB_ENV
+      # =============================================================PULL REQUEST EVENT=============================================================
+      # Set information about github event with name pull_request
+      # Set git infortmation
+      - name: Set GitInfo PR
+        run: |
+           echo "GitInfoPR=$(echo "<code>Repository:</code> $GIT_COMMIT_REPO%0A<code>Compare Branch:</code> ${{ github.head_ref }}%0A<code>Base Branch:</code> ${{ github.base_ref }}%0A<code>Commit:</code> <b>$GIT_COMMIT_SHORT</b>%0A<code>Actor:</code> $GIT_ACTOR_NAME%0A<code>Message:</code> $GIT_COMMIT_MESSAGE")">>$GITHUB_ENV
       # Pull Request actions
       - name: Pull Request opened
         if: ${{ github.event.action == 'opened' }}
@@ -51,19 +71,19 @@ jobs:
       - name: Pull Request assigned
         if: ${{ github.event.action == 'assigned' }}
         run: |
-          echo "message=$(echo "<code>Details:</code> Some user was assigned to this Pull Request")">>$GITHUB_ENV
+          echo "message=$(echo "<code>Details:</code> $assignee_type $assignee_login was assigned to this Pull Request")">>$GITHUB_ENV
       - name: Pull Request unassigned
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unassigned' }}
+        if: ${{ github.event.action == 'unassigned' }}
         run: |
-          echo "message=$(echo "<code>Details:</code> Some user was unassigned from this Pull Request")">>$GITHUB_ENV
+          echo "message=$(echo "<code>Details:</code> $assignee_type $assignee_login was unassigned from this Pull Request")">>$GITHUB_ENV
       - name: Pull Request labeled
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'labeled' }}
+        if: ${{ github.event.action == 'labeled' }}
         run: |
-          echo "message=$(echo "<code>Details:</code> A label was applied to this Pull Request")">>$GITHUB_ENV
+          echo "message=$(echo "<code>Details:</code> A label <b>$label_name</b> was applied to this Pull Request%0A<code>Description:</code> $label_description")">>$GITHUB_ENV
       - name: Pull Request unlabeled
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unlabeled' }}
+        if: ${{ github.event.action == 'unlabeled' }}
         run: |
-          echo "message=$(echo "<code>Details:</code> A label was removed to this Pull Request")">>$GITHUB_ENV
+          echo "message=$(echo "<code>Details:</code> A label <b>$label_name</b> was removed to this Pull Request%0A<code>Description:</code> $label_description")">>$GITHUB_ENV
       - name: Pull Request edited
         if: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' }}
         run: |
@@ -73,30 +93,62 @@ jobs:
         run: |
           echo "message=$(echo "<code>Details:</code> Pull Request was closed")">>$GITHUB_ENV
       - name: Pull Request is ready for review
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'ready_for_review' }}
+        if: ${{ github.event.action == 'ready_for_review' }}
         run: |
           echo "message=$(echo "<code>Details:</code> Pull Request was taken out from draft mode")">>$GITHUB_ENV
       - name: Pull Request locked
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'locked' }}
+        if: ${{ github.event.action == 'locked' }}
         run: |
           echo "message=$(echo "<code>Details:</code> Pull Request was locked")">>$GITHUB_ENV
       - name: Pull Request unlocked
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'unlocked' }}
+        if: ${{ github.event.action == 'unlocked' }}
         run: |
           echo "message=$(echo "<code>Details:</code> Pull Request was unlocked")">>$GITHUB_ENV
       - name: Pull Request review request
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'review_requested' }}
+        if: ${{ github.event.action == 'review_requested' }}
         run: |
           echo "message=$(echo "<code>Details:</code> Request a user for review")">>$GITHUB_ENV
       - name: Pull Request rm review request
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'review_request_removed' }}
+        if: ${{ github.event.action == 'review_request_removed' }}
         run: |
           echo "message=$(echo "<code>Details:</code> Remove request from user for review")">>$GITHUB_ENV
+      ######################testing actions###########################
+      - name: Pull Request rv ed
+        if: ${{ github.event_name == 'pull_request_review' && github.event.action == 'edited' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review edited")">>$GITHUB_ENV
+      - name: Pull Request rvc ed
+        if: ${{ github.event_name == 'pull_request_review_comment' && github.event.action == 'edited' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review comment edited%0A<code>Comment:</code> $comment%0A<code>Title:</code> $title")">>$GITHUB_ENV
+      - name: Pull Request rv sbm
+        if: ${{ github.event.action == 'submitted' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review submitted")">>$GITHUB_ENV
+      - name: Pull Request rv dism
+        if: ${{ github.event.action == 'dismissed' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review dismissed")">>$GITHUB_ENV
+      - name: Pull Request rvc crtd
+        if: ${{ github.event.action == 'created' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review comment created%0A<code>Comment:</code> $comment%0A<code>Title:</code> $title")">>$GITHUB_ENV
+      - name: Pull Request rvc del
+        if: ${{ github.event.action == 'deleted' }}
+        run: |
+          echo "message=$(echo "<code>Details:</code> Pull Request review comment deleted%0A<code>Comment:</code> $comment%0A<code>Title:</code> $title")">>$GITHUB_ENV
+      - name: Pull Request unassigned
+      #########################end test###############################
       # Set specific Status Message if job is failed
       - name: Set error
-        if: failure()
+        if: ${{ failure() && github.event_name == 'push' }}
         run: |
           echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
+      # Set specific Status Message if job is failed. PR
+      - name: Set error PR
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        run: |
+          echo "statusMessage=$(echo "$message%0A$GitInfoPR")">>$GITHUB_ENV
        # Set specific Status Message if job is successfull
       - name: Set success message
         if: ${{ success() && github.event_name == 'push' }}
@@ -109,9 +161,14 @@ jobs:
               echo "statusSymbol=$(echo -ne '\xE2\x9C\x85' | iconv -f utf-8)">>$GITHUB_ENV
       # Set Message for Telegram
       - name: Set success status
-        if: success()
+        if: ${{ success() && github.event_name == 'push'}}
         run: |
               echo "statusMessage=$(echo "$message%0A$GitInfo")">>$GITHUB_ENV
+      # Set Message for Telegram PR
+      - name: Set success status PR
+        if: ${{ success() && github.event_name == 'pull_request' }}
+        run: |
+              echo "statusMessage=$(echo "$message%0A$GitInfoPR")">>$GITHUB_ENV
       # Send Message to Telegram Chat
       - name: Send to Telegram
         if: always()
