@@ -26,11 +26,6 @@ jobs:
       - name: logout
         run: |
           exit
-    # Show Payload
-      - name: Show Payload
-        if: always()
-        run: |
-          cat ${{ github.event_path }} 
     # Set environments for all job's steps
       - name: Set Env
         run: |
