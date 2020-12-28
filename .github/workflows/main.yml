@@ -29,7 +29,8 @@ jobs:
     # Payload
       - name: Show Payload
         if: success()
-        run: cat ${{ github.event_path }}
+        run: |
+          cat ${{ github.event_path }}
     # Set environments for all job's steps
       - name: Set Env
         run: |
