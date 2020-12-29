@@ -1,3 +1,10 @@
+# xeniaweber_infra
+xeniaweber Infra repository
+## Homework 4
+## Дано
+- testapp_IP - 130.193.50.70
+- teastapp_port - 9292
+## Homework 3
 ## Дано
 - bastion_IP - 84.201.133.93
 - someintrenalhost_IP - 10.130.0.31
