@@ -17,5 +17,9 @@ sudo systemctl start mongod
 sudo systemctl enable mongod
 
 # Checking status MongoDB
-sudo systemctl status mongod
+if (sudo systemctl -q is-active mongod)
+	then
+	echo "Mongodb is active"
+	exit 1
+fi
 
