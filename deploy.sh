@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Updating apt
-sudo apt-get update
+sudo apt-get -y  update
 
 # Installing apt
-sudo apt-get install git
+sudo apt-get -y install git
 
 # Cloning repository
 git clone -b monolith https://github.com/express42/reddit.git
@@ -14,7 +14,6 @@ cd reddit
 bundle install
 
 # Starting app
-cd reddit
 puma -d
 
 # Checking port
