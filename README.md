@@ -1,5 +1,18 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 5
+- Шаблон параметризирован при помощи скрипта [variables.json](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/packer-base/packer/variables.json.examples)
+- Из дополнительных опций параметризованы следующие:
+```console
+"disk_type": "network-ssd",
+"zone": "ru-central1-a"
+```
+- Cоздания bake-образа с приложением:
+    - Написан шаблон [immutable.json](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/packer-base/packer/immutable.json), в секцию *provisioners* добавлено выполнения скрипта deploy.sh
+    - Внесены измнения в сркипт [deploy.sh](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/packer-base/packer/files/deploy.sh), в ходе которых создается systemd unit приложения (puma.service)
+    - В результате с помощью packer создается образ, для которого в *immutable.json* указан  с *image_family* **redit-full**
+    - Написан скрипт файл [create-reddit-vm.sh](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/packer-base/config-scripts/create-reddit-vm.sh) для автоматического создания инстанса с использованием созданного образа **redit-full**. Для этого указан параметр для *image_id* - идентификатор образа   
+- Ключ key.json остался у меня на локальном устройстве, дабы не храниться в публичном репозитории
 ## Homework 4
 ## Дано
 - testapp_IP - 130.193.50.70
