@@ -1,0 +1,10 @@
+{
+    "folder_id": "b1dsfdjk5jk6k5",
+    "source_image_family": "ubuntu-1604-lts",
+    "service_account_key_file": "key.json",
+    "platform_id": "standard-v1",
+    "ssh_username": "ubuntu",
+    "disk_type": "network-ssd",
+    "zone": "ru-central1-a"
+}
+
