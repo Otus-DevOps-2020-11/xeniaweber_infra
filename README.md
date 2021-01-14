@@ -87,6 +87,20 @@ resource "yandex_compute_instance" "app" {
 ```console
 host = self.network_interface.0.nat_ip_address
 ```
+В файле lb.tf внесена возможность динамического подключения ресурсов к целевой группе:
+```console
+ dynamic "target" {
+    for_each = [for t in yandex_compute_instance.app: {
+     address = t.network_interface.0.ip_address
+  }
+ ]
+    content {
+     subnet_id = var.subnet_id
+     address = target.value.address
+    }
+  }
+}
+```
 И для вывода списка IP-адресов созданных инстансов определенна output переменная в [outputs.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/outputs.tf):
 ```console
 output "external_ip_address_apps" {
