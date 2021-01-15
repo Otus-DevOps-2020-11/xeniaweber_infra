@@ -1,5 +1,112 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 6
+### Самостоятельная работа 
+- Опредляю input переменную для приватного ключа. Для этого в [variables.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/variables.tf) добавляю следующую запись:
+```console
+variable private_key_path {
+  description = "Path to the private key"
+}
+```
+А в *terraform.tfvars* добавляю следующую запись:
+```console
+private_key_path         = "~/.ssh/ubuntu"
+```
+- Определяю input переменную для задания зоны в ресурсе *"yandex_compute_instance" "app"*, в файле [main.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/main.tf) добавляю следующую запись для данного ресура:
+```console
+   zone = var.zone
+```
+- Так как [.gitigonre](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/.gitignore) не позволит закоммитить *terraform.tfvars*, файл скопирован с названием [terraform.tfvars.example](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/terraform.tfvars.example) и закоммичен в таком виде.
+### Задание с **
+- Создан HTTP балансировщик, для его создания написан файл [lb.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/lb.tf)
+Для начала создана целевая группа, состоящая из облачных ресурсов, по которым будет распределяться входящий трафик. На данный момент такой облачный ресурс - инстанс, создание которого описано в [main.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/main.tf). Для создания целевой группы с инстансом использую ресурс *"yandex_lb_target_group"* :
+```console
+resource "yandex_lb_target_group" "apps" { 
+  name = "apps-target-group"
+  region_id = "ru-central1"
+
+  target {
+    subnet_id = var.subnet_id
+    address   = yandex_compute_instance.app.network_interface.0.ip_address
+ }
+}
+```
+Далее использован ресурс *"yandex_lb_network_load_balancer"* для создания самого балансировщика (*listener*) и прикрепления к нему целевой группы (*attached_target_group*), в настройках балансировщика можно также заметить перенаправление трафика с 80 порта (*port = 80*) на 9292 порт для всех инстансов целевой группы (*target_port = 9292*) и проверку доступности инстансов по 9292 порту (*healthcheck*):
+```console
+resource "yandex_lb_network_load_balancer" "lb_app" {
+  name = "lb-reddit"
+
+  listener {
+    name = "app-listener"
+    port = 80
+    target_port = 9292
+    external_address_spec {
+      ip_version = "ipv4"
+    }
+  }
+
+  attached_target_group {
+    target_group_id = yandex_lb_target_group.apps.id
+
+    healthcheck {
+      name = "http"
+      http_options {
+        port = 9292
+      }
+    }
+  }
+}
+```
+Для IP-адреса балансировщика определена output перемененна, для этого в [outputs.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/outputs.tf) внесена следующая запись:
+```console
+output "external_ip_address_lb" {
+  value = yandex_lb_network_load_balancer.lb_app.listener.*.external_address_spec[0].*.address
+}
+```
+- В [main.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/main.tf) добавлен код для создания второго инстанса reddit-app2 по подобию кода для первого инстанса. На данный момент эта часть кода закомментирована в файле. Также инстанс reddit-app2 по подобию reddit-app был добавлен в целевую группу в файле [lb.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/lb.tf) (эта часть кода тоже закомментирована) и была определенна output переменная для вывода публичного IP-адреса. Output переменна создана тоже по подобию переменной для первого инстанса и тоже на данный моменты закомментирована в файле [outputs.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/outputs.tf). 
+Такой подход не очень удобен, так как кода становится слишком много и сам код просто дублируется. Если, к примеру, придется создавать 100 инстансов, на дублирование можно потратить очень много времени. Оптимизация такого процесса представлена в следующем пункте.
+- Использую мета-параметр **count** для создания множества копий облачных ресурсов. Для начала была создана input переменная для **count**, в файле [variables.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/variables.tf) внесена следующая запись:
+```console
+variable appcount {
+  description = "Value for count"
+  default = 1
+}
+```
+В файл [terraform.tfvars](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/terraform.tfvars.example) внесена следующая запись:
+```console
+appcount             = 1
+```
+И наконец в [main.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/main.tf) определен **count** для ресурса *"yandex_compute_instance" "app"*:
+```console
+resource "yandex_compute_instance" "app" {
+  count = var.appcount
+  name = "reddit-app${count.index + 1}"
+  zone = var.zone
+``` 
+В секции *connection* так же значение для *host* приведенно к следующему виду: 
+```console
+host = self.network_interface.0.nat_ip_address
+```
+В файле lb.tf внесена возможность динамического подключения ресурсов к целевой группе:
+```console
+ dynamic "target" {
+    for_each = [for t in yandex_compute_instance.app: {
+     address = t.network_interface.0.ip_address
+  }
+ ]
+    content {
+     subnet_id = var.subnet_id
+     address = target.value.address
+    }
+  }
+}
+```
+И для вывода списка IP-адресов созданных инстансов определенна output переменная в [outputs.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/outputs.tf):
+```console
+output "external_ip_address_apps" {
+  value = yandex_compute_instance.app.*.network_interface.0.nat_ip_address
+}
+```
 ## Homework 5
 - Шаблон параметризирован при помощи скрипта [variables.json](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/packer-base/packer/variables.json.examples)
 - Из дополнительных опций параметризованы следующие:
