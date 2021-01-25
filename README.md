@@ -1,5 +1,85 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 7 
+### Задание со *
+   Для работы с Object Storage создан сервисный акканут и для него сгенерирован статический ключ доступа:
+```console
+yc iam access-key-create --service-account-name srvterraform --folder-id fdfjdkfjkjdkjfd
+```
+   Из полученного вывода мне нужна информация из строк **key_id** и **secret**. Эта информация понадобится для создания backend.tf
+   Далее создаю бакет в консоли в разделе Object Storage, даю ему публичный доступ и имя - **terraform-xw**. Внутри бакета создаю папки **prod** и **stage**, в которых будут храниться файлы состояния terraform.tfstate для окружений prod и stage   
+   Для того, чтобы сохранить состояние Terraform в Object Storage, указываю следующие настройки провайдера и бэкенда:
+```console
+terraform {
+  backend "s3" {
+    endpoint   = "storage.yandexcloud.net"
+    bucket     = "<имя созданного бакета>"
+    region     = "ru-central1"
+    key        = "<путь к файлу состояния в бакете>"
+    access_key = "<key_id>"
+    secret_key = "<secret>"
+
+    skip_region_validation      = true
+    skip_credentials_validation = true
+  }
+}
+
+``` 
+   Все это сохраняю в конфигурационный файл **backend.tf**:
+- Для prod: [backend.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/prod/backend.tf)
+- Для stage: [backend.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/stage/backend.tf)
+   Выбранный бэкенда s3 поддерживает блокировки, но с помощью DynamoDB, которая подключается опцией **dynamodb_table**, для которой указывается имя таблицы в DynamoDB. Используя одну таблицу Dynamo DB можно блокировать несколько удаленных файлов состояния. 
+      
+### Задание с **
+   Для того, чтобы в процессе поднятия инстанса было установлено приложение, для модулей были добавлены необходимые provisioner. 
+   Сам скрипт с установкой приложения выполняю в provisioner для модуля app, так как этот модуль использует созданный образ с установленными ruby и bundler. Также инстанс app должен знать IP адрес db, так как приложение не будет работать без MongoDB. Приложение использует переменную окружения DATABASE_URL для того, чтобы получить адрес базы данных. Переменную окружения можно указать при создания юнита. В юнит была добавлена строчка в секцию [Service]:
+```console
+Environment="DATABASE_URL=${dp_int_addr}"
+```
+   Здесь переменной окружения я присваиваю актуальный IP-адрес базы данных. Для того, чтобы в файле переменная **dp_int_addr** определилась с нужным IP адресом, пишу следующий provisioner:
+```console
+  provisioner "file" {
+    content = templatefile("${path.module}/puma.tmpl", { dp_int_addr = var.db_ip })
+    destination = "/tmp/puma.service"
+  }
+``` 
+  Здесь я копирую со своего локального устройства на инстанс файл шаблон [puma.tmpl](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/modules/app/puma.tmpl) для создания юнита приложения. Переменной в файле юнита присваиваю переменную terraform, которая выдаст актуальный адрес для MongoDB. Вначале в [outputs.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/modules/db/outputs.tf) для модуля db записываю новую output переменную для определения внутреннего IP адреса:
+```console
+output "internal_ip_address_db" {
+  value = yandex_compute_instance.db.network_interface.0.ip_address
+}
+```
+  Потом в главном конфгурационном файле [main.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/prod/main.tf) в определении модуля app для значения переменной **db_ip** ссылаюсь на значение output переменной:
+```console
+db_ip           = module.db.internal_ip_address_db
+``` 
+  После того, как создается юнит с необходимыми значениями, срабатывает следующий provisioner для модуля app:
+```console
+provisioner "remote-exec" {
+    script = "${path.module}/deploy.sh"   
+  } 
+```
+  Здесь выполняется скрипт деплоя приожения с использованием необходимого юнита с актуальными данными.
+  Далее необходимо внести изменения в конфигурационный файл MongoDB модуля db, так в файле по дефолту указывается localhost, а необходимо указать его адрес в локальной сети, чтобы к нему мог обращаться инстанс с приложением. Для модуля db написан следующий provisioner:
+```console 
+   provisioner "file" {
+    content = templatefile("${path.module}/mongod.tmpl", { db_int_addr = yandex_compute_instance.db.network_interface.0.ip_address })
+    destination = "/tmp/mongod.conf"
+  } 
+```
+  Здесь используется файл шаблон [mongod.tmpl](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/modules/db/mongod.tmpl) для создания конфига с актуальным адресом, который будет определен переменной db_int_addr.
+  Далее для модуля db написан следующий provisioner:
+```console
+  provisioner "remote-exec" {
+    script = "${path.module}/mdb_conf.sh"   
+  }
+```
+  Здесь выполняется скрипт [mdb_conf.sh](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-2/terraform/modules/db/mdb_conf.sh), в котором конфигурационный файл перемещается в необходимую директорию и сервис **mongod** перезапускается для принятия новых конфигураций. 
+  В директории prod или stage запускаю проект с новыми настройками модулей:
+```console
+$ terraform plan
+$ terraform apply -auto-approve
+```
 ## Homework 6
 ### Самостоятельная работа 
 - Опредляю input переменную для приватного ключа. Для этого в [variables.tf](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/terraform-1/terraform/variables.tf) добавляю следующую запись:

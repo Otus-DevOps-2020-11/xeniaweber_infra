@@ -1,5 +1,10 @@
+# Terraform service files
+
 *.tfstate
 *.tfstate.*.backup
 *.tfstate.backup
 *.tfvars
 .terraform/
+
+# Key
+key.json
