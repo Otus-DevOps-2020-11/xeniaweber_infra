@@ -1,5 +1,43 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 8
+  Написан файл [invetory](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/inventory) , в котором указаны app и db хосты
+  Используя модуль **ping** была проверена сетевая доступность хостов. Модуль вызывается при помощи ключа **-m**. Получается команда следующего вида:
+```console
+$ ansible appserver -i ./inventory -m ping 
+```
+  Удачное выполнение выглядит следующим образом:
+```console
+appserver | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+```
+  Чтобы не писать много одинаковой информации в [inventory](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/inventory) был создан файл [ansible.cfg](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/ansible.cfg), в котором указаны общая информация для хостов и путь к inventory файлу.
+  Так как есть возможность использовать YAML для inventory, был написан [inventory.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/inventory.yml).
+  Был написан также плейбук [clone.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/clone.yml), c использованием модуля **git** для клонирования репозитория из github.
+  Для выполнения плейбука использую команду:
+  ```console
+  $ ansible-playbook clone.yml
+  ``` 
+  Вывод выглядит следующим образом:
+  ```console
+  PLAY RECAP *********************************************************************
+appserver                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+  ``` 
+  Удаляю склонированный репозиторий:
+  ```console
+  $ ansible app -m command -a 'rm -rf ~/reddit'
+  ```
+  При повторном выполнении плейбука вижу следующий вывод:
+  ```console
+  PLAY RECAP *********************************************************************
+appserver                  : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+  ```
+  Видна разница в выводах. Вначале получаем значение **changed=0** , так как репозиторий уже был до этого склонирован и нечего было менять. Сценарий просто был еще раз выполнен, но не внес изменений. Далее последовало удаление директории с репозиторием и при повторном выполнении плейбука получаем значение **changed=1** и это говорит о том, что при выполнении сценария были внесены изменения, а именно: был склонирован репозиторий. 
 ## Homework 7 
 ### Задание со *
    Для работы с Object Storage создан сервисный акканут и для него сгенерирован статический ключ доступа:
