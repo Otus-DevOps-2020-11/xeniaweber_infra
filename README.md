@@ -1,5 +1,114 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 9
+### Самостоятельное задание
+  Для provisioners packer были написаны плейбуки:
+  - [packer_app.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/packer_app.yml)
+  - [packer_db.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/packer_db.yml)  
+  
+ В файлах packer для билда образов app и db типы provisioners заменены с **"shell"** на **"ansible"**   
+ Для **app**:
+  ```console
+   "provisioners": [
+        {
+             "type": "ansible",
+             "playbook_file": "ansible/packer_app.yml"
+         }
+    ]
+  ```
+  Для **db**:
+  ```console
+   "provisioners": [
+        {
+             "type": "ansible",
+             "playbook_file": "ansible/packer_db.yml"
+         }
+    ]
+  ```
+  Плейбуки заменяют bash скрипты, которые раннее выполнялись в блоке **provisioners**. Плейбуки написаны без применения модулей **shell** и **command**.
+  Пример замены [install_ruby.sh](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/packer/scripts/install_ruby.sh) на [packer_app.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/packer_app.yml)
+  Строка для обновления **apt** в скрипте
+  ```console
+  apt-get -y update
+  ```
+  заменяется на следующий таск в плейбуке:
+  ```console
+  - name: Apt update
+      apt:
+        update_cache: yes
+  ```
+  Строка для инсталляции пакетов в скрипте
+  ```console
+  apt install -y ruby-full ruby-bundler build-essential
+  ```
+  заменяется на следующий таск в плейбуке:
+  ```console
+   - name: Install ruby&bundler
+      apt:
+       pkg:
+       - ruby-full
+       - ruby-bundler
+       - build-essential
+  ```  
+  Пример замены [install_mongod.sh](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/packer/scripts/install_mongod.sh) на [packer_db.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/packer_db.yml)  
+  Строка добавления ключа для **apt** в скрипте
+  ```console
+  wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
+  ```
+  заменяетя на следующий таск:
+  ```console
+  - name: Add key MongoDB
+      apt_key:
+        url: https://www.mongodb.org/static/pgp/server-4.2.asc
+        state: present
+  ```
+  Строка добавления репозитория для **MongoDB** в скрипте
+  ```console
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+  ```
+  заменяется на следующий таск:
+  ```console
+  - name: Add repository MongoDB
+      lineinfile:
+        path: /etc/apt/sources.list.d/mongodb-org-4.2.list
+        line: deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse
+        create: yes
+  ```
+  Строка инсталляции **MongoDB** в скрипте
+  ```console
+  apt-get install -y mongodb-org
+  ```
+  заменяется на следующий таск:
+  ```console
+  - name: Install MongoDB
+      apt:
+        name: mongodb-org
+      notify: start mongod
+  ```
+  При помощи **notify** вызывю **handler**, где стартует сервис **mongod**
+  ```console
+    handlers:
+  - name: start mongod
+    service: name=mongod state=started
+  ```
+  Далее в корне репозитория делаю билды образов.  
+  Для **app**:
+  ```console
+  $ packer build -var-file=packer/variables.json packer/app.json
+  ```
+  Для **db**:
+  ```console
+  $ packer build -var-files=packer/variables.json packer/db.json
+  ```
+  Далее в **terraform.tfvars** меняю **id** образов для **app** и **db** и поднимаю инстансы
+  ```console
+  $ terraform apply --auto-approve
+  ```
+  И выполняю плейбук [site.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/site.yml), в котором импортированы [app.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/app.yml), [db.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/db.yml), [deploy.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/deploy.yml)
+  ```console
+  $ ansible-playbook site.yml
+  ```
+  
 ## Homework 8
   Написан файл [invetory](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-1/ansible/inventory) , в котором указаны app и db хосты
   Используя модуль **ping** была проверена сетевая доступность хостов. Модуль вызывается при помощи ключа **-m**. Получается команда следующего вида:

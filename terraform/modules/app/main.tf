@@ -33,12 +33,12 @@ resource "yandex_compute_instance" "app" {
     ssh-keys = "ubuntu:${file(var.public_key_path)}"
   }
   
-  provisioner "file" {
-    content = templatefile("${path.module}/puma.tmpl", { dp_int_addr = var.db_ip })
-    destination = "/tmp/puma.service"
-  }
-
-  provisioner "remote-exec" { 
-    script = "${path.module}/deploy.sh"
-   }
+#  provisioner "file" {
+#    content = templatefile("${path.module}/puma.tmpl", { dp_int_addr = var.db_ip })
+#    destination = "/tmp/puma.service"
+#  }
+#
+#  provisioner "remote-exec" { 
+#    script = "${path.module}/deploy.sh"
+#   }
 }

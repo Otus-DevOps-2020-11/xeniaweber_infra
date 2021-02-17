@@ -33,12 +33,12 @@ resource "yandex_compute_instance" "db" {
     ssh-keys = "ubuntu:${file(var.public_key_path)}"
   }
 
-  provisioner "file" {
-    content = templatefile("${path.module}/mongod.tmpl", { db_int_addr = yandex_compute_instance.db.network_interface.0.ip_address })
-    destination = "/tmp/mongod.conf"
-  }
-
-  provisioner "remote-exec" {
-    script = "${path.module}/mdb_conf.sh"   
-  } 
+#  provisioner "file" {
+#    content = templatefile("${path.module}/mongod.tmpl", { db_int_addr = yandex_compute_instance.db.network_interface.0.ip_address })
+#    destination = "/tmp/mongod.conf"
+#  }
+#
+#  provisioner "remote-exec" {
+#    script = "${path.module}/mdb_conf.sh"   
+#  } 
 }
