@@ -12,3 +12,5 @@ key.json
 # Ansible tmp files
 
 *.retry
+jdauphant.nginx
+vault.key
