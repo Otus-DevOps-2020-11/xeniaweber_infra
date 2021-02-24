@@ -1,5 +1,61 @@
 # xeniaweber_infra
 xeniaweber Infra repository
+## Homework 10
+### Самостоятельное задание
+   Для открытия 80 порта в конфигурации **Terraform** необходимо использовать ресур [yandex_vpc_security_group](https://registry.terraform.io/providers/yandex-cloud/yandex/latest/docs/resources/vpc_security_group), однако сервис **Группа безопасности** в Yandex Cloud находится в состоянии **Preview-версии**. Отправляла заявку на использование данного ресурса, однако заявку до сих пор не приняли. 
+   Добавляю вызов роли **jdauphant.nginx** в плейбук [app.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/app.yml) , добавив в секцию **roles** данную роль:
+   ```console
+   roles:
+     - app
+     - jdauphant.nginx
+   ``` 
+   Для проксирования добавляю следующую переменную для окружений **prod** - [prod/group_vars/app](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/prod/group_vars/app) и **stage** - [stage/group_vars/app](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/stage/group_vars/app):
+   ```console
+   nginx_sites:
+     default:
+       - listen 80
+       - server_name "reddit"
+       - location / {
+           proxy_pass http://127.0.0.1:9292;
+         }
+   ```
+   Разворачиваю окружение **stage** и выполняю плейбук [site.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-2/ansible/site.yml). Приложение лоступно по **80** порту.  
+### Работа с Ansible Vault
+   1. Создаю файл **vault.key** с произвольной строкой и добавляю в [.gitignore](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/.gitignore)
+   2. В [ansible.cfg](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/ansible.cfg) добавляю опцию:
+   ```console
+   [default]
+   ...
+   vault_password_file = vault.key
+   ``` 
+   3. Добавляю плейбук для создания пользователей [users.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/users.yml)
+   4. Создаю файлы с данными пользователей **credentials.yml** для окружений **stage** и **prod** такого вида:
+   ```console
+   credentials:
+     users:
+     'имя_пользователя':
+       password: 'пароль'
+       groups: 'группа'
+   ```
+   5. Шифрую файл, используя **vault.key**
+   ```console
+   $ ansible-vault encrypt environments/prod/credentials.yml
+   $ ansible-vault encrypt environments/stage/credentials.yml 
+   ```
+   6. Убеждаюсь, что теперь содержимое файлов с данными зашифрованно. Для **prod** - [credentials.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/prod/credentials.yml) и для **stage** - [stage.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/stage/credentials.yml)
+   7. Добавляю в [site.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/site.yml) вызов [users.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/users.yml):
+   ```console
+   - import_playbook: users.yml
+   ```
+   8. Выполняю в **stage** окружении:
+   ```console
+   $ ansbile-playbook site.yml
+   ```
+   9. На сервере **app** проверяю наличие созданных пользователей **admin** и **qauser**:
+   ```console
+   $ su admin
+   $ su qauser
+   ```
 ## Homework 9
 ### Самостоятельное задание
   Для provisioners packer были написаны плейбуки:
