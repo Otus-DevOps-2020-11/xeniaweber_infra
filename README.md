@@ -42,7 +42,7 @@ xeniaweber Infra repository
    $ ansible-vault encrypt environments/prod/credentials.yml
    $ ansible-vault encrypt environments/stage/credentials.yml 
    ```
-   6. Убеждаюсь, что теперь содержимое файлов с данными зашифрованно. Для **prod** - [credentials.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/prod/credentials.yml) и для **stage** - [stage.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/stage/credentials.yml)
+   6. Убеждаюсь, что теперь содержимое файлов с данными зашифрованно. Для **prod** - [credentials.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/prod/credentials.yml) и для **stage** - [credentials.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/environments/stage/credentials.yml)
    7. Добавляю в [site.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/site.yml) вызов [users.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-3/ansible/playbooks/users.yml):
    ```console
    - import_playbook: users.yml
