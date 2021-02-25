@@ -2,6 +2,9 @@
 - name: Deploy App
   hosts: app
   become: true
+  vars: 
+    deploy_user: ubuntu
+
   tasks:
     - name: Install git
       apt:
