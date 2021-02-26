@@ -3,7 +3,7 @@
   hosts: app
   become: true
   vars: 
-    deploy_user: ubuntu
+    deploy_user: appuser
 
   tasks:
     - name: Install git
