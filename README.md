@@ -2,7 +2,7 @@
 xeniaweber Infra repository
 ## Homework 11
 ### Задание со * (Vagrant)
-Для корректной работы проксирования приложения с помощью nginx добавляю следующие строчки в [Vagrantfile]() для *ansbile.extra_vars*:
+Для корректной работы проксирования приложения с помощью nginx добавляю следующие строчки в [Vagrantfile](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/ansible/Vagrantfile) для *ansible.extra_vars*:
 ```console
 nginx_sites: {
              default: [ 
@@ -13,20 +13,20 @@ nginx_sites: {
         }       
 ``` 
 ### Самостоятельная работа 
-  -  Для теста, в ходе которого выясняется слушает ли БД по порту **27017** использую модуль **Socket** Testinfra. В [test_default.py]() добавляю следюущие строки:
+  -  Для теста, в ходе которого выясняется слушает ли БД по порту **27017** использую модуль [Socket](https://testinfra.readthedocs.io/en/latest/modules.html#testinfra.modules.socket.Socket) **Testinfra**. В [test_default.py](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/ansible/roles/db/molecule/default/tests/test_default.py) добавляю следюущие строки:
 ```console
 # check listening 27017
 def test_mongo_port(host):
     mongo_port = host.socket("tcp://0.0.0.0:27017")
     assert mongo_port.is_listening 
 ```
-  - Использую роли **db** и **app** в плейбуках [packer_db.yml]() и [packer_app.yml](), которые используются в шаблонах **packer**. 
-Для использование ролей и работы с тэгами добавляю в шаблон [app.json]() следующие строки для **provisioner**:
+  - Использую роли **db** и **app** в плейбуках [packer_db.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/ansible/playbooks/packer_db.yml) и [packer_app.yml](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/ansible/playbooks/packer_app.yml), которые используются в шаблонах **packer**. 
+Для использование ролей и работы с тэгами добавляю в шаблон [app.json](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/packer/app.json) следующие строки для **provisioner**:
 ```console
 "extra_arguments": ["--tags","ruby"],
 "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/ansible/roles"]
 ```
-Для использования ролей и работы с тэгами добавляю в шаблон [db.json]() следующие строки для **provisioner**:
+Для использования ролей и работы с тэгами добавляю в шаблон [db.json](https://github.com/Otus-DevOps-2020-11/xeniaweber_infra/blob/ansible-4/packer/db.json) следующие строки для **provisioner**:
 ```console
 "extra_arguments": ["--tags","install"],
 "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/ansible/roles"]
